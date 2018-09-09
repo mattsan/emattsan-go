@@ -1,11 +1,12 @@
 package idobata
 
 import (
+    "bufio"
     "bytes"
-    "io/ioutil"
     "mime/multipart"
     "net/http"
     "net/url"
+    "os"
 )
 
 type Hook struct {
@@ -29,21 +30,32 @@ func (hook *Hook) PostHtml(html string) (*http.Response, error) {
     return http.PostForm(hook.Url, body)
 }
 
+func createBodyFromFile(filename string, buffer *bytes.Buffer) (string, error) {
+    multipartWriter := multipart.NewWriter(buffer)
+    defer multipartWriter.Close()
+
+    writer, err := multipartWriter.CreateFormFile("image", filename)
+    if err != nil { return "", err }
+
+    source, err := os.Open(filename)
+    if err != nil { return "", err }
+    defer source.Close()
+
+    bufferedWriter := bufio.NewWriter(writer)
+    _, err = bufferedWriter.ReadFrom(source)
+    if err != nil { return "", err }
+
+    err = bufferedWriter.Flush()
+    if err != nil { return "", err }
+
+    return multipartWriter.FormDataContentType(), nil
+}
+
 func (hook *Hook) PostImageFile(filename string) (*http.Response, error) {
-    image, err := ioutil.ReadFile(filename)
-
-    if err != nil { return nil, err }
-
     buffer := new(bytes.Buffer)
 
-    multipartWriter := multipart.NewWriter(buffer)
-    writer, err := multipartWriter.CreateFormFile("image", filename)
-
+    contentType, err := createBodyFromFile(filename, buffer)
     if err != nil { return nil, err }
 
-    writer.Write(image)
-
-    multipartWriter.Close()
-
-    return http.Post(hook.Url, multipartWriter.FormDataContentType(), buffer)
+    return http.Post(hook.Url, contentType, buffer)
 }
