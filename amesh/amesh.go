@@ -10,8 +10,8 @@ import (
     "net/http"
     "os"
 
-    "emattsan-go/amesh/constants"
-    "emattsan-go/amesh/index"
+    "github.com/mattsan/emattsan-go/amesh/constants"
+    "github.com/mattsan/emattsan-go/amesh/index"
 )
 
 func downloadJpeg(path string) (image.Image, error) {
@@ -91,5 +91,6 @@ func composite(topography, boundary, radar string) (image.Image, error) {
 
 func LatestImage()  (image.Image, error) {
     lastIndex, _ := index.LatestIndex()
-    return composite(constants.Topography, constants.Boundary, fmt.Sprintf(constants.IMAGE_URL_FORMAT, lastIndex))
+    meshUrl := fmt.Sprintf(constants.MESH_URL_FORMAT, lastIndex)
+    return composite(constants.TOPOGRAPHY_URL, constants.BOUNDARY_URL, meshUrl)
 }

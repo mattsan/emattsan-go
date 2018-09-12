@@ -5,7 +5,7 @@ import (
     "net/http"
     "bytes"
 
-    "emattsan-go/amesh/constants"
+    "github.com/mattsan/emattsan-go/amesh/constants"
 )
 
 func scanDigits(src []byte) [][]byte {
@@ -26,7 +26,7 @@ func fetchIndices(url string) ([][]byte, error) {
 }
 
 func LatestIndex() (string, error) {
-    indices, err := fetchIndices(constants.INDICES_URL)
+    indices, err := fetchIndices(constants.MESH_INDICES_URL)
     if err != nil { return "", err }
 
     maxIndex := []byte{}
