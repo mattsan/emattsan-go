@@ -3,6 +3,9 @@ package idobata
 import (
     "bufio"
     "bytes"
+    "image"
+    "image/jpeg"
+    "io"
     "mime/multipart"
     "net/http"
     "net/url"
@@ -30,31 +33,52 @@ func (hook *Hook) PostHtml(html string) (*http.Response, error) {
     return http.PostForm(hook.Url, body)
 }
 
-func createBodyFromFile(filename string, buffer *bytes.Buffer) (string, error) {
+func createBody(filename string, buffer *bytes.Buffer, writeImage func(io.Writer) error) (string, error) {
     multipartWriter := multipart.NewWriter(buffer)
     defer multipartWriter.Close()
 
     writer, err := multipartWriter.CreateFormFile("image", filename)
     if err != nil { return "", err }
 
-    source, err := os.Open(filename)
-    if err != nil { return "", err }
-    defer source.Close()
-
-    bufferedWriter := bufio.NewWriter(writer)
-    _, err = bufferedWriter.ReadFrom(source)
-    if err != nil { return "", err }
-
-    err = bufferedWriter.Flush()
+    err = writeImage(writer)
     if err != nil { return "", err }
 
     return multipartWriter.FormDataContentType(), nil
+}
+
+func createBodyFromFile(filename string, buffer *bytes.Buffer) (string, error) {
+    return createBody(filename, buffer, func(writer io.Writer) error {
+        source, err := os.Open(filename)
+        if err != nil { return err }
+        defer source.Close()
+
+        bufferedWriter := bufio.NewWriter(writer)
+        _, err = bufferedWriter.ReadFrom(source)
+        if err != nil { return err }
+
+        return bufferedWriter.Flush()
+    })
+}
+
+func createBodyFromImage(image image.Image, buffer *bytes.Buffer) (string, error) {
+    return createBody("image.jpg", buffer, func(writer io.Writer) error {
+        return jpeg.Encode(writer, image, &jpeg.Options{Quality: 100})
+    })
 }
 
 func (hook *Hook) PostImageFile(filename string) (*http.Response, error) {
     buffer := new(bytes.Buffer)
 
     contentType, err := createBodyFromFile(filename, buffer)
+    if err != nil { return nil, err }
+
+    return http.Post(hook.Url, contentType, buffer)
+}
+
+func (hook* Hook) PostImage(image image.Image) (*http.Response, error) {
+    buffer := new(bytes.Buffer)
+
+    contentType, err := createBodyFromImage(image, buffer)
     if err != nil { return nil, err }
 
     return http.Post(hook.Url, contentType, buffer)
