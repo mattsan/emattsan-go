@@ -5,7 +5,7 @@ import (
     "net/http"
     "bytes"
 
-    "emattsan-go/amesh/constants"
+    "github.com/mattsan/emattsan-go/amesh/constants"
 )
 
 func scanDigits(src []byte) [][]byte {

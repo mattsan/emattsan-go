@@ -10,8 +10,8 @@ import (
     "net/http"
     "os"
 
-    "emattsan-go/amesh/constants"
-    "emattsan-go/amesh/index"
+    "github.com/mattsan/emattsan-go/amesh/constants"
+    "github.com/mattsan/emattsan-go/amesh/index"
 )
 
 func downloadJpeg(path string) (image.Image, error) {
