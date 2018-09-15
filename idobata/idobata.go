@@ -1,7 +1,6 @@
 package idobata
 
 import (
-    "bufio"
     "bytes"
     "image"
     "image/jpeg"
@@ -52,11 +51,8 @@ func createBodyFromFile(filename string, buffer *bytes.Buffer) (string, error) {
         if err != nil { return err }
         defer source.Close()
 
-        bufferedWriter := bufio.NewWriter(writer)
-        _, err = bufferedWriter.ReadFrom(source)
-        if err != nil { return err }
-
-        return bufferedWriter.Flush()
+        _, err = io.Copy(writer, source)
+        return err
     })
 }
 
