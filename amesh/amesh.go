@@ -17,6 +17,13 @@ import (
     "github.com/mattsan/emattsan-go/amesh/index"
 )
 
+type Image struct {
+    Timestamp time.Time
+    Topography image.Image
+    Boundary image.Image
+    Radar image.Image
+}
+
 type decoder func (io.Reader) (image.Image, error)
 
 func downloadImage(decode decoder, path string) (image.Image, error) {
@@ -39,31 +46,6 @@ func saveToJpegFile(filename string, image image.Image) error {
     defer file.Close()
 
     return jpeg.Encode(file, image, &jpeg.Options{Quality: 100})
-}
-
-func composeImages(topographyImage, boundaryImage, radarImage image.Image) image.Image {
-    topographyRect := image.Rectangle{image.Point{0, 0}, topographyImage.Bounds().Size()}
-    boundaryRect := image.Rectangle{image.Point{0, 0}, boundaryImage.Bounds().Size()}
-    radarRect := image.Rectangle{image.Point{0, 0}, radarImage.Bounds().Size()}
-
-    resultImage := image.NewRGBA(topographyRect)
-
-    draw.Draw(resultImage, topographyRect, topographyImage, image.Point{0, 0}, draw.Src)
-    draw.Draw(resultImage, radarRect, radarImage, image.Point{0, 0}, draw.Over)
-    draw.Draw(resultImage, boundaryRect, boundaryImage, image.Point{0, 0}, draw.Over)
-
-    return resultImage
-}
-
-func composite(topography, boundary, radar string) (image.Image, error) {
-    topographyImage, err := downloadImage(jpeg.Decode, topography)
-    if err != nil { return nil, err }
-    boundaryImage, err := downloadImage(png.Decode, boundary)
-    if err != nil { return nil, err }
-    radarImage, err := downloadImage(gif.Decode, radar)
-    if err != nil { return nil, err }
-
-    return composeImages(topographyImage, boundaryImage, radarImage), nil
 }
 
 func strsToInts(ss ...string) ([]int, error) {
@@ -96,10 +78,44 @@ func strToTime(s string) (time.Time, error) {
     return datetime, nil
 }
 
-func LatestImage()  (image.Image, time.Time, error) {
+func LatestImage()  (*Image, error) {
     lastIndex, _ := index.LatestIndex()
-    datetime, _ := strToTime(lastIndex)
-    meshUrl := fmt.Sprintf(constants.MESH_URL_FORMAT, lastIndex)
-    image, err := composite(constants.TOPOGRAPHY_URL, constants.BOUNDARY_URL, meshUrl)
-    return image, datetime, err
+    timestamp, _ := strToTime(lastIndex)
+    radarUrl := fmt.Sprintf(constants.MESH_URL_FORMAT, lastIndex)
+
+    topographyImage, err := downloadImage(jpeg.Decode, constants.TOPOGRAPHY_URL)
+    if err != nil { return nil, err }
+
+    boundaryImage, err := downloadImage(png.Decode, constants.BOUNDARY_URL)
+    if err != nil { return nil, err }
+
+    radarImage, err := downloadImage(gif.Decode, radarUrl)
+    if err != nil { return nil, err }
+
+    image := Image{
+      Timestamp: timestamp,
+      Topography: topographyImage,
+      Boundary: boundaryImage,
+      Radar: radarImage,
+    }
+
+    return &image, err
+}
+
+func composeImages(topographyImage, boundaryImage, radarImage image.Image) image.Image {
+    topographyRect := image.Rectangle{image.Point{0, 0}, topographyImage.Bounds().Size()}
+    boundaryRect := image.Rectangle{image.Point{0, 0}, boundaryImage.Bounds().Size()}
+    radarRect := image.Rectangle{image.Point{0, 0}, radarImage.Bounds().Size()}
+
+    resultImage := image.NewRGBA(topographyRect)
+
+    draw.Draw(resultImage, topographyRect, topographyImage, image.Point{0, 0}, draw.Src)
+    draw.Draw(resultImage, radarRect, radarImage, image.Point{0, 0}, draw.Over)
+    draw.Draw(resultImage, boundaryRect, boundaryImage, image.Point{0, 0}, draw.Over)
+
+    return resultImage
+}
+
+func (image *Image) Composite() (image.Image, error) {
+    return composeImages(image.Topography, image.Boundary, image.Radar), nil
 }
