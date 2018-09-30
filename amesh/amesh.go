@@ -10,11 +10,12 @@ import (
     "net/http"
     "os"
     "io"
+    "strconv"
+    "time"
 
     "github.com/mattsan/emattsan-go/amesh/constants"
     "github.com/mattsan/emattsan-go/amesh/index"
 )
-
 
 type decoder func (io.Reader) (image.Image, error)
 
@@ -65,8 +66,40 @@ func composite(topography, boundary, radar string) (image.Image, error) {
     return composeImages(topographyImage, boundaryImage, radarImage), nil
 }
 
-func LatestImage()  (image.Image, error) {
+func strsToInts(ss ...string) ([]int, error) {
+    is := make([]int, len(ss))
+
+    for index, s := range ss {
+        i, err := strconv.ParseInt(s, 10, 64)
+        if err != nil { return nil, err }
+        is[index] = int(i)
+    }
+
+    return is, nil
+}
+
+func strToTime(s string) (time.Time, error) {
+    is, err := strsToInts(s[0:4], s[4:6], s[6:8], s[8:10], s[10:12])
+    if err != nil { return time.Time{}, err }
+
+    datetime := time.Date(
+        is[0],
+        time.Month(is[1]),
+        is[2],
+        is[3],
+        is[4],
+        0,
+        0,
+        time.Local,
+    )
+
+    return datetime, nil
+}
+
+func LatestImage()  (image.Image, time.Time, error) {
     lastIndex, _ := index.LatestIndex()
+    datetime, _ := strToTime(lastIndex)
     meshUrl := fmt.Sprintf(constants.MESH_URL_FORMAT, lastIndex)
-    return composite(constants.TOPOGRAPHY_URL, constants.BOUNDARY_URL, meshUrl)
+    image, err := composite(constants.TOPOGRAPHY_URL, constants.BOUNDARY_URL, meshUrl)
+    return image, datetime, err
 }
