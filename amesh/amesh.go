@@ -9,51 +9,27 @@ import (
     "image/gif"
     "net/http"
     "os"
+    "io"
 
     "github.com/mattsan/emattsan-go/amesh/constants"
     "github.com/mattsan/emattsan-go/amesh/index"
 )
 
-func downloadJpeg(path string) (image.Image, error) {
+
+type decoder func (io.Reader) (image.Image, error)
+
+func downloadImage(decode decoder, path string) (image.Image, error) {
     resp, err := http.Get(path)
     if err != nil { return nil, err }
-    return jpeg.Decode(resp.Body)
+    return decode(resp.Body)
 }
 
-func downloadPng(path string) (image.Image, error) {
-    resp, err := http.Get(path)
-    if err != nil { return nil, err }
-    return png.Decode(resp.Body)
-}
-
-func downloadGif(path string) (image.Image, error) {
-    resp, err := http.Get(path)
-    if err != nil { return nil, err }
-    return gif.Decode(resp.Body)
-}
-
-func loadJpegFromFile(filename string) (image.Image, error) {
+func loadImageFromFile(decode decoder, filename string) (image.Image, error) {
     file, err := os.Open(filename)
     if err != nil { return nil, err }
     defer file.Close()
 
-    return jpeg.Decode(file)
-}
-
-func loadPngFromFile(filename string) (image.Image, error) {
-    file, err := os.Open(filename)
-    if err != nil { return nil, err }
-    defer file.Close()
-
-    return png.Decode(file)
-}
-
-func loadGifFromFile(filename string) (image.Image, error) {
-    file, err := os.Open(filename)
-    if err != nil { return nil, err }
-    defer file.Close()
-
-    return gif.Decode(file)
+    return decode(file)
 }
 
 func saveToJpegFile(filename string, image image.Image) error {
@@ -79,11 +55,11 @@ func composeImages(topographyImage, boundaryImage, radarImage image.Image) image
 }
 
 func composite(topography, boundary, radar string) (image.Image, error) {
-    topographyImage, err := downloadJpeg(topography)
+    topographyImage, err := downloadImage(jpeg.Decode, topography)
     if err != nil { return nil, err }
-    boundaryImage, err := downloadPng(boundary)
+    boundaryImage, err := downloadImage(png.Decode, boundary)
     if err != nil { return nil, err }
-    radarImage, err := downloadGif(radar)
+    radarImage, err := downloadImage(gif.Decode, radar)
     if err != nil { return nil, err }
 
     return composeImages(topographyImage, boundaryImage, radarImage), nil
