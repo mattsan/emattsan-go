@@ -103,15 +103,11 @@ func LatestImage()  (*Image, error) {
 }
 
 func composeImages(topographyImage, boundaryImage, radarImage image.Image) image.Image {
-    topographyRect := image.Rectangle{image.Point{0, 0}, topographyImage.Bounds().Size()}
-    boundaryRect := image.Rectangle{image.Point{0, 0}, boundaryImage.Bounds().Size()}
-    radarRect := image.Rectangle{image.Point{0, 0}, radarImage.Bounds().Size()}
+    resultImage := image.NewRGBA(topographyImage.Bounds())
 
-    resultImage := image.NewRGBA(topographyRect)
-
-    draw.Draw(resultImage, topographyRect, topographyImage, image.Point{0, 0}, draw.Src)
-    draw.Draw(resultImage, radarRect, radarImage, image.Point{0, 0}, draw.Over)
-    draw.Draw(resultImage, boundaryRect, boundaryImage, image.Point{0, 0}, draw.Over)
+    draw.Draw(resultImage, topographyImage.Bounds(), topographyImage, image.Point{0, 0}, draw.Src)
+    draw.Draw(resultImage, topographyImage.Bounds(), radarImage, image.Point{0, 0}, draw.Over)
+    draw.Draw(resultImage, topographyImage.Bounds(), boundaryImage, image.Point{0, 0}, draw.Over)
 
     return resultImage
 }
