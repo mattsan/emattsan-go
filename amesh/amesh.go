@@ -8,7 +8,6 @@ import (
     "image/png"
     "image/gif"
     "net/http"
-    "os"
     "io"
     "strconv"
     "time"
@@ -30,22 +29,6 @@ func downloadImage(decode decoder, path string) (image.Image, error) {
     resp, err := http.Get(path)
     if err != nil { return nil, err }
     return decode(resp.Body)
-}
-
-func loadImageFromFile(decode decoder, filename string) (image.Image, error) {
-    file, err := os.Open(filename)
-    if err != nil { return nil, err }
-    defer file.Close()
-
-    return decode(file)
-}
-
-func saveToJpegFile(filename string, image image.Image) error {
-    file, err := os.Create(filename)
-    if err != nil { return err }
-    defer file.Close()
-
-    return jpeg.Encode(file, image, &jpeg.Options{Quality: 100})
 }
 
 func strsToInts(ss ...string) ([]int, error) {
