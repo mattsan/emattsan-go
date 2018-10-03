@@ -52,7 +52,7 @@ func strsToInts(ss ...string) ([]int, error) {
     is := make([]int, len(ss))
 
     for index, s := range ss {
-        i, err := strconv.ParseInt(s, 10, 64)
+        i, err := strconv.Atoi(s)
         if err != nil { return nil, err }
         is[index] = int(i)
     }
@@ -65,14 +65,9 @@ func strToTime(s string) (time.Time, error) {
     if err != nil { return time.Time{}, err }
 
     datetime := time.Date(
-        is[0],
-        time.Month(is[1]),
-        is[2],
-        is[3],
-        is[4],
-        0,
-        0,
-        time.Local,
+        is[0], time.Month(is[1]), is[2], // date
+        is[3], is[4], 0, 0,              // time
+        time.Local,                      // locale
     )
 
     return datetime, nil
