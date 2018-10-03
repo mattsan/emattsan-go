@@ -8,7 +8,6 @@ import (
     "image/png"
     "image/gif"
     "net/http"
-    "os"
     "io"
     "strconv"
     "time"
@@ -32,27 +31,11 @@ func downloadImage(decode decoder, path string) (image.Image, error) {
     return decode(resp.Body)
 }
 
-func loadImageFromFile(decode decoder, filename string) (image.Image, error) {
-    file, err := os.Open(filename)
-    if err != nil { return nil, err }
-    defer file.Close()
-
-    return decode(file)
-}
-
-func saveToJpegFile(filename string, image image.Image) error {
-    file, err := os.Create(filename)
-    if err != nil { return err }
-    defer file.Close()
-
-    return jpeg.Encode(file, image, &jpeg.Options{Quality: 100})
-}
-
 func strsToInts(ss ...string) ([]int, error) {
     is := make([]int, len(ss))
 
     for index, s := range ss {
-        i, err := strconv.ParseInt(s, 10, 64)
+        i, err := strconv.Atoi(s)
         if err != nil { return nil, err }
         is[index] = int(i)
     }
@@ -65,14 +48,9 @@ func strToTime(s string) (time.Time, error) {
     if err != nil { return time.Time{}, err }
 
     datetime := time.Date(
-        is[0],
-        time.Month(is[1]),
-        is[2],
-        is[3],
-        is[4],
-        0,
-        0,
-        time.Local,
+        is[0], time.Month(is[1]), is[2], // date
+        is[3], is[4], 0, 0,              // time
+        time.Local,                      // locale
     )
 
     return datetime, nil
@@ -103,15 +81,11 @@ func LatestImage()  (*Image, error) {
 }
 
 func composeImages(topographyImage, boundaryImage, radarImage image.Image) image.Image {
-    topographyRect := image.Rectangle{image.Point{0, 0}, topographyImage.Bounds().Size()}
-    boundaryRect := image.Rectangle{image.Point{0, 0}, boundaryImage.Bounds().Size()}
-    radarRect := image.Rectangle{image.Point{0, 0}, radarImage.Bounds().Size()}
+    resultImage := image.NewRGBA(topographyImage.Bounds())
 
-    resultImage := image.NewRGBA(topographyRect)
-
-    draw.Draw(resultImage, topographyRect, topographyImage, image.Point{0, 0}, draw.Src)
-    draw.Draw(resultImage, radarRect, radarImage, image.Point{0, 0}, draw.Over)
-    draw.Draw(resultImage, boundaryRect, boundaryImage, image.Point{0, 0}, draw.Over)
+    draw.Draw(resultImage, topographyImage.Bounds(), topographyImage, image.Point{0, 0}, draw.Src)
+    draw.Draw(resultImage, topographyImage.Bounds(), radarImage, image.Point{0, 0}, draw.Over)
+    draw.Draw(resultImage, topographyImage.Bounds(), boundaryImage, image.Point{0, 0}, draw.Over)
 
     return resultImage
 }
@@ -130,15 +104,17 @@ func (image *Image) RainingRatio(point image.Point, radius int) int {
     radiusSquared := radius * radius
     rect := image.Radar.Bounds()
     for y := rect.Min.Y; y < rect.Max.Y; y++ {
-          for x := rect.Min.X; x < rect.Max.X; x++ {
-              _, _, _, a := image.Radar.At(x, y).RGBA()
-              if norm(point.X - x, point.Y - y) <= radiusSquared {
-                  area += 1
-                  if a > 0 {
-                      count += 1
-                  }
-              }
-          }
+        for x := rect.Min.X; x < rect.Max.X; x++ {
+            _, _, _, a := image.Radar.At(x, y).RGBA()
+            if norm(point.X - x, point.Y - y) > radiusSquared {
+                continue
+            }
+
+            area += 1
+            if a > 0 {
+                count += 1
+            }
+        }
     }
     return count * 100 / area
 }
