@@ -106,11 +106,13 @@ func (image *Image) RainingRatio(point image.Point, radius int) int {
     for y := rect.Min.Y; y < rect.Max.Y; y++ {
           for x := rect.Min.X; x < rect.Max.X; x++ {
               _, _, _, a := image.Radar.At(x, y).RGBA()
-              if norm(point.X - x, point.Y - y) <= radiusSquared {
-                  area += 1
-                  if a > 0 {
-                      count += 1
-                  }
+              if norm(point.X - x, point.Y - y) > radiusSquared {
+                  continue
+              }
+
+              area += 1
+              if a > 0 {
+                  count += 1
               }
           }
     }
