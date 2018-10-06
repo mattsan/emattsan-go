@@ -6,7 +6,10 @@ import (
     "net/url"
 )
 
-const UrlCurrentWeather = "https://api.openweathermap.org/data/2.5/weather"
+const (
+    UrlCurrentWeather = "https://api.openweathermap.org/data/2.5/weather"
+    UrlForecast5Days = "https://api.openweathermap.org/data/2.5/forecast"
+)
 
 type Coordinate struct {
     longitude float64 `json:"lon"`
@@ -50,18 +53,42 @@ type Sys struct {
 }
 
 type CurrentWeatherData struct {
-    Coordinate Coordinate `json:"coord"`
-    Weather    []Weather  `json:"weather"`
-    Base       string     `json:"base"`
-    Main       Main       `json:"main"`
-    Wind       Wind       `json:"wind"`
-    Clouds     Clouds     `json:"clouds"`
-    Rain       Value3h    `json:"rain"`
-    Snow       Value3h    `json:"snow"`
-    Dt         int        `json:"dt"`
-    Sys        Sys        `json:"sys"`
-    Id         int        `json:"id"`
-    Name       string     `json:"name"`
+    Coord   Coordinate `json:"coord"`
+    Weather []Weather  `json:"weather"`
+    Base    string     `json:"base"`
+    Main    Main       `json:"main"`
+    Wind    Wind       `json:"wind"`
+    Clouds  Clouds     `json:"clouds"`
+    Rain    Value3h    `json:"rain"`
+    Snow    Value3h    `json:"snow"`
+    Dt      int        `json:"dt"`
+    Sys     Sys        `json:"sys"`
+    Id      int        `json:"id"`
+    Name    string     `json:"name"`
+}
+
+type City struct {
+    Id      int        `json:"id"`
+    Name    string     `json:"name"`
+    Coord   Coordinate `json:"coord"`
+    Country string     `json:"country"`
+}
+
+type ListItem struct {
+    Dt      int       `json:"dt"`
+    Main    Main      `json:"main"`
+    Weather []Weather `json:"weather"`
+    Clouds  Clouds    `json:"clouds"`
+    Wind    Wind      `json:"wind"`
+    Rain    Value3h   `json:"rain"`
+    Snow    Value3h   `json:"snow"`
+    DtTxt   string    `json:"dt_txt"`
+}
+
+type Forecast5DaysData struct {
+    City City `json:"city"`
+    Cnt  int  `json:"cnt"`
+    List []ListItem `json:"list"`
 }
 
 type Query struct {
@@ -98,6 +125,22 @@ func (query *Query) GetchCurrentWeather() (*CurrentWeatherData, error) {
     defer resp.Body.Close()
 
     data := new(CurrentWeatherData)
+    decoder := json.NewDecoder(resp.Body)
+    err = decoder.Decode(data)
+    return data, err
+}
+
+func (query *Query) GetchForecast5Days() (*Forecast5DaysData, error) {
+    url, _ := url.Parse(UrlForecast5Days)
+    url.RawQuery = query.Encode()
+
+    println(url.String())
+
+    resp, err := http.Get(url.String())
+    if err != nil { return nil, err }
+    defer resp.Body.Close()
+
+    data := new(Forecast5DaysData)
     decoder := json.NewDecoder(resp.Body)
     err = decoder.Decode(data)
     return data, err
