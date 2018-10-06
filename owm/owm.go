@@ -1,10 +1,12 @@
 package owm
 
 import (
-    "fmt"
     "encoding/json"
     "net/http"
+    "net/url"
 )
+
+const UrlCurrentWeather = "https://api.openweathermap.org/data/2.5/weather"
 
 type Coordinate struct {
     longitude float64 `json:"lon"`
@@ -62,24 +64,41 @@ type CurrentWeatherData struct {
     Name       string     `json:"name"`
 }
 
-type Params struct {
+type Query struct {
     AppId string
-    BaseUrl string
     City string
     Units string
+    Language string
 }
 
-func (params *Params) getCurrentWeatherUrl() string {
-  return fmt.Sprintf("%s?q=%s&units=%s&appid=%s", params.BaseUrl, params.City, params.Units, params.AppId)
+func (query *Query) Encode() string {
+    values := url.Values{}
+    values.Set("q", query.City)
+    values.Set("units", query.Units)
+    values.Set("lang", query.Language)
+    values.Set("appid", query.AppId)
+    return values.Encode()
 }
 
-func (data *CurrentWeatherData) FetchCurrentWeather(params *Params) error {
-    resp, err := http.Get(params.getCurrentWeatherUrl())
+func Tokyo(appid string) Query {
+    return Query{
+        AppId: appid,
+        City: "Tokyo,jp",
+        Units: "metric",
+        Language: "ja",
+    }
+}
 
-    if err != nil { return err }
+func (query *Query) GetchCurrentWeather() (*CurrentWeatherData, error) {
+    url, _ := url.Parse(UrlCurrentWeather)
+    url.RawQuery = query.Encode()
 
+    resp, err := http.Get(url.String())
+    if err != nil { return nil, err }
     defer resp.Body.Close()
 
+    data := new(CurrentWeatherData)
     decoder := json.NewDecoder(resp.Body)
-    return decoder.Decode(data)
+    err = decoder.Decode(data)
+    return data, err
 }
